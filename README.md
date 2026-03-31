@@ -332,6 +332,15 @@ Rooms persist indefinitely. Messages support cursor-based pagination (`?before=t
 
 ---
 
+
+
+## Screenshots
+<img width="1470" height="956" alt="Screenshot 2026-04-01 at 12 11 33 AM" src="https://github.com/user-attachments/assets/576bd8b5-cb9f-44af-9fdb-2ec04ce42f1f" />
+<img width="1470" height="956" alt="Screenshot 2026-04-01 at 12 53 30 AM" src="https://github.com/user-attachments/assets/1609150f-b767-4937-8406-5c8be56f1d5b" />
+<img width="1470" height="956" alt="Screenshot 2026-04-01 at 12 53 52 AM" src="https://github.com/user-attachments/assets/80cb526e-9538-45a2-9ae6-0d1c80a44048" />
+
+
+---
 ## Environment Variables
 
 | Variable | Default | Description |
