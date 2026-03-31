@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  roomMembers  RoomMember[]
+  messages     Message[]
+  messageAcks  MessageAck[]
+  reactions    Reaction[]
+  mediaUploads MediaUpload[]
+
+  @@map("users")
+}
+
+enum RoomType {
+  direct
+  group
+}
+
+model Room {
+  id         String    @id @default(uuid())
+  name       String
+  type       RoomType  @default(group)
+  createdBy  String    @map("created_by")
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  members      RoomMember[]
+  messages     Message[]
+  mediaUploads MediaUpload[]
+
+  @@map("rooms")
+}
+
+enum MemberRole {
+  admin
+  member
+  viewer
+}
+
+model RoomMember {
+  roomId   String     @map("room_id")
+  userId   String     @map("user_id")
+  role     MemberRole @default(member)
+  joinedAt DateTime   @default(now()) @map("joined_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+  @@map("room_members")
+}
+
+enum MessageType {
+  text
+  media
+  system
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  roomId    String      @map("room_id")
+  senderId  String      @map("sender_id")
+  type      MessageType @default(text)
+  content   Json
+  deletedAt DateTime?   @map("deleted_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  room      Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender    User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  acks      MessageAck[]
+  reactions Reaction[]
+
+  @@index([roomId, createdAt])
+  @@map("messages")
+}
+
+model MessageAck {
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  status    String   // "delivered" | "read"
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+  @@map("message_acks")
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("reactions")
+}
+
+model MediaUpload {
+  id         String   @id @default(uuid())
+  roomId     String   @map("room_id")
+  uploaderId String   @map("uploader_id")
+  objectKey  String   @map("object_key")
+  mimeType   String   @map("mime_type")
+  filename   String
+  sizeBytes  BigInt   @map("size_bytes")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  room     Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@map("media_uploads")
+}
