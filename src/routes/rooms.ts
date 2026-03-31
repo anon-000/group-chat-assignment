@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/db";
 import { authenticate } from "../middleware/auth";
 import { AuthRequest } from "../types";
+import { subscribeUserToRoom } from "../ws";
 
 const router = Router();
 
@@ -118,6 +119,12 @@ router.post(
         },
       },
     });
+
+    // Subscribe all members' WS connections to the new room
+    await subscribeUserToRoom(userId, room.id);
+    for (const id of memberIds || []) {
+      await subscribeUserToRoom(id, room.id);
+    }
 
     res.status(201).json(room);
   }

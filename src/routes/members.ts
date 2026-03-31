@@ -4,6 +4,7 @@ import { prisma } from "../config/db";
 import { authenticate } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { AuthRequest } from "../types";
+import { subscribeUserToRoom } from "../ws";
 
 const router = Router({ mergeParams: true });
 
@@ -77,6 +78,7 @@ router.post(
       },
     });
 
+    await subscribeUserToRoom(userId, roomId);
     res.status(201).json(member);
   }
 );

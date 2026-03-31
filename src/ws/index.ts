@@ -19,6 +19,19 @@ const connectionMeta = new Map<
 const PRESENCE_TTL = 30;
 const HEARTBEAT_INTERVAL = 20_000;
 
+/** Subscribe a user's existing WS connections to a new room */
+export async function subscribeUserToRoom(userId: string, roomId: string) {
+  const conns = userConnections.get(userId);
+  if (!conns) return;
+  for (const ws of conns) {
+    const meta = connectionMeta.get(ws);
+    if (meta && !meta.rooms.has(roomId)) {
+      meta.rooms.add(roomId);
+    }
+  }
+  await redisSub.subscribe(`room:${roomId}`);
+}
+
 export function setupWebSocket(server: HttpServer) {
   const wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -159,6 +172,13 @@ async function handleMessage(
       })
     );
     return;
+  }
+
+  // Dynamically subscribe to room if joined after WS connect
+  const meta = connectionMeta.get(ws);
+  if (meta && !meta.rooms.has(room_id)) {
+    meta.rooms.add(room_id);
+    await redisSub.subscribe(`room:${room_id}`);
   }
 
   switch (type) {

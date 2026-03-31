@@ -131,4 +131,26 @@ router.get(
   }
 );
 
+router.get(
+  "/lookup",
+  authenticate,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const email = req.query.email as string;
+    if (!email) {
+      res.status(400).json({ error: "Email query parameter required" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, email: true, avatarUrl: true },
+    });
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json(user);
+  }
+);
+
 export default router;

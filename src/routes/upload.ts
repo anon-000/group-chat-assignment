@@ -16,6 +16,8 @@ const ALLOWED_MIMES = new Set([
   "image/webp",
   "audio/mpeg",
   "audio/ogg",
+  "audio/webm",
+  "audio/mp4",
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
