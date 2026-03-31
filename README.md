@@ -1,6 +1,6 @@
-# Group Chat
+# Chat System
 
-A real-time group chat backend and frontend with room-based messaging, media sharing, voice recording, role-based access control, typing indicators, presence, and read receipts.
+A real-time chat platform with group rooms and direct messages, media sharing, voice recording, role-based access control, typing indicators, online presence, and read receipts.
 
 ## Tech Stack
 
@@ -322,13 +322,25 @@ The server upserts into `message_acks` and broadcasts to the room. The sender se
 
 Unread counts per room are computed server-side by counting messages with no read ack from the requesting user.
 
-### 9. Rooms
+### 9. Rooms & Direct Messages
 
-Two types:
-- **Group** (2-500 members): Creator becomes admin, can invite others
-- **Direct** (exactly 2 members): Enforced uniqueness — can't create duplicate DMs
+The system supports two room types that share the same messaging infrastructure:
 
-Rooms persist indefinitely. Messages support cursor-based pagination (`?before=timestamp&limit=N`, max 100). Soft-deleted messages return as `{deleted: true}` tombstones.
+**Group Rooms** (2-500 members):
+- Creator becomes admin, can invite/remove members, change roles
+- Sidebar shows `#` icon, member count, and settings gear
+- Members can be admin, member, or viewer
+
+**Direct Messages** (exactly 2 members):
+- Created via "+ Message" button — enter recipient's email
+- Enforced uniqueness — if a DM already exists between two users, the existing room is opened instead of creating a duplicate
+- Sidebar shows the other person's name and avatar initial
+- Header shows the other person's name with online/offline presence status (polled every 15s)
+- No settings gear or member management — it's just a 1:1 conversation
+
+Both types share the same backend: WebSocket messaging, read receipts, typing indicators, reactions, and media uploads all work identically. The only differences are in the frontend UI and the creation validation logic.
+
+Messages support cursor-based pagination (`?before=timestamp&limit=N`, max 100). Soft-deleted messages return as `{deleted: true}` tombstones.
 
 ---
 
