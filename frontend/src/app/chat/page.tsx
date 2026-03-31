@@ -112,6 +112,29 @@ export default function ChatPage() {
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId) || null;
 
+  // Fetch presence for DMs
+  const [peerOnline, setPeerOnline] = useState(false);
+  useEffect(() => {
+    if (!activeRoom || activeRoom.type !== "direct") {
+      setPeerOnline(false);
+      return;
+    }
+    const peerId = activeRoom.members.find((m) => m.userId !== user!.id)?.userId;
+    if (!peerId) return;
+
+    let cancelled = false;
+    const checkPresence = async () => {
+      const res = await apiFetch(`/rooms/${activeRoom.id}/presence`);
+      if (res.ok && !cancelled) {
+        const data = await res.json();
+        setPeerOnline(data.online.includes(peerId));
+      }
+    };
+    checkPresence();
+    const interval = setInterval(checkPresence, 15000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [activeRoom, user]);
+
   return (
     <div className="flex h-screen">
       <Sidebar
@@ -131,38 +154,48 @@ export default function ChatPage() {
             {/* Room header */}
             <div className="flex items-center justify-between border-b border-gray-800 px-6 py-3">
               <div>
-                <h2 className="font-semibold">{activeRoom.name}</h2>
-                <p className="text-xs text-gray-400">
-                  {activeRoom.members.length} members
-                  {connected && (
-                    <span className="ml-2 text-green-400">connected</span>
-                  )}
-                </p>
+                <h2 className="font-semibold">
+                  {activeRoom.type === "direct"
+                    ? activeRoom.members.find((m) => m.userId !== user!.id)?.user.name || activeRoom.name
+                    : activeRoom.name}
+                </h2>
+                {activeRoom.type === "group" && (
+                  <p className="text-xs text-gray-400">
+                    {activeRoom.members.length} members
+                  </p>
+                )}
+                {activeRoom.type === "direct" && (
+                  <p className={`text-xs ${peerOnline ? "text-green-400" : "text-gray-500"}`}>
+                    {peerOnline ? "Online" : "Offline"}
+                  </p>
+                )}
               </div>
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              {activeRoom.type === "group" && (
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
 
             {showSettings ? (

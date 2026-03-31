@@ -22,6 +22,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDmModal, setShowDmModal] = useState(false);
 
   return (
     <div className="flex w-72 flex-col border-r border-gray-800 bg-gray-900">
@@ -41,13 +42,19 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* New room button */}
-      <div className="p-3">
+      {/* New room / DM buttons */}
+      <div className="flex gap-2 p-3">
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-full rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700"
+          className="flex-1 rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700"
         >
-          + New Room
+          + Group
+        </button>
+        <button
+          onClick={() => setShowDmModal(true)}
+          className="flex-1 rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700"
+        >
+          + Message
         </button>
       </div>
 
@@ -129,6 +136,18 @@ export default function Sidebar({
           }}
         />
       )}
+
+      {/* DM Modal */}
+      {showDmModal && (
+        <DmModal
+          onClose={() => setShowDmModal(false)}
+          onCreated={(roomId) => {
+            setShowDmModal(false);
+            onRoomCreated();
+            onSelectRoom(roomId);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -201,6 +220,104 @@ function CreateRoomModal({
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DmModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (roomId: string) => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    // Look up user by email
+    const lookupRes = await apiFetch(
+      `/auth/lookup?email=${encodeURIComponent(email)}`
+    );
+    if (!lookupRes.ok) {
+      setError("User not found with that email");
+      setLoading(false);
+      return;
+    }
+    const targetUser = await lookupRes.json();
+
+    // Create direct room
+    const res = await apiFetch("/rooms", {
+      method: "POST",
+      body: JSON.stringify({
+        name: targetUser.name,
+        type: "direct",
+        memberIds: [targetUser.id],
+      }),
+    });
+
+    if (res.ok) {
+      const room = await res.json();
+      onCreated(room.id);
+    } else {
+      const data = await res.json();
+      // If DM already exists, open it
+      if (data.roomId) {
+        onCreated(data.roomId);
+      } else {
+        setError(data.error || "Failed to create conversation");
+      }
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-full max-w-sm rounded-xl bg-gray-900 p-6 shadow-xl">
+        <h2 className="mb-4 text-lg font-semibold">New Message</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+          <div>
+            <label className="mb-1 block text-sm text-gray-300">
+              Recipient email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              placeholder="user@example.com"
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-4 py-2 text-sm text-gray-400 hover:text-gray-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? "Starting..." : "Start Chat"}
             </button>
           </div>
         </form>
